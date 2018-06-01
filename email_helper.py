@@ -41,6 +41,10 @@ def get_mail_content(msg):
         content_charset = msg.get_content_charset()
         content_type = msg.get_content_type()
         content_text = ''
+
+        if (not content_type.startswith("multipart/")) and (not content_type.startswith("text/")):
+            return ""
+
         try:
             if msg.get('content-transfer-encoding') in _SHOULD_DECODED_ENCODING:
                 content_text = msg.get_payload(decode=True).decode(content_charset)
@@ -57,6 +61,8 @@ def get_mail_content(msg):
             return str(html_instance.getText())
         else:
             payload = msg.get_payload(decode=False)
+            if isinstance(payload, list):
+                return get_mail_content(payload)
             return payload
 
 

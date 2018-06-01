@@ -5,7 +5,7 @@ from keras.preprocessing.text import Tokenizer
 
 from email_helper import *
 
-eml_path = "Y:\\2c23eff186c76668c7bec9db096a65eb.eml"  # if len(sys.argv) != 3 else sys.argv[2]
+eml_path = "Y:\\trec06c\\data\\018\\023"  # if len(sys.argv) != 3 else sys.argv[2]
 write_path = "zxcv"
 model_path = "m.h5"
 
