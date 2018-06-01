@@ -14,7 +14,7 @@ EMAIL_CONTENT_DELIMITER = "/ "
 NOT_ALLOW_CHAR = re.compile(u"[^\u4e00-\u9fffa-zA-Z,.\s]")
 SYMBOL_RE = re.compile(u"[.,\[\]@\s:()\r\n\-]+")
 SPACE_RE = re.compile("^\s+$")
-ENCODING_RE = re.compile(r"content-type(.*?);(\s+)?charset(\s+)?=(\s+)?['\"]?(.*?)['\"]?\s",
+ENCODING_RE = re.compile(r"content-type(.*?);(\s+)?charset(\s+)?=(\s+)?['\"]?([a-zA-Z0-9\-]+)['\"]?(\s|$)",
                          re.IGNORECASE | re.MULTILINE)
 
 ENCODING_RE2 = re.compile(r"Subject:(\s+)?=\?([a-zA-Z0-9\-]+)\?", re.IGNORECASE | re.MULTILINE)
