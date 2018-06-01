@@ -11,7 +11,7 @@ from bs4 import BeautifulSoup
 
 EMAIL_CONTENT_DELIMITER = "/ "
 
-NOT_ALLOW_CHAR = re.compile(u"[^\u4e00-\u9fffa-zA-Z,.\s]")
+NOT_ALLOW_CHAR = re.compile(u"[^\u4e00-\u9fffa-zA-Z0-9,.\s]")
 SYMBOL_RE = re.compile(u"[.,\[\]@\s:()\r\n\-]+")
 SPACE_RE = re.compile("^\s+$")
 ENCODING_RE = re.compile(r"content-type(.*?);(\s+)?charset(\s+)?=(\s+)?['\"]?([a-zA-Z0-9\-]+)['\"]?(\s|$)",
@@ -19,8 +19,14 @@ ENCODING_RE = re.compile(r"content-type(.*?);(\s+)?charset(\s+)?=(\s+)?['\"]?([a
 
 ENCODING_RE2 = re.compile(r"Subject:(\s+)?=\?([a-zA-Z0-9\-]+)\?", re.IGNORECASE | re.MULTILINE)
 
+UNICODE_ESCAPE_RE = re.compile(r"\\u[0-9a-fA-F]{4}", re.IGNORECASE | re.MULTILINE)
+
+_SHOULD_DECODED_ENCODING = {'quoted-printable', 'base64', 'x-uuencode', 'uuencode', 'uue', 'x-uue'}
+
 
 def split_words(txt: str):
+    txt = txt.replace("\ufffd", "").replace("\\ufffd", "")
+    txt = re.sub(UNICODE_ESCAPE_RE, "", txt)
     txt = re.sub(SYMBOL_RE, " ", txt)
     txt = re.sub(NOT_ALLOW_CHAR, "", txt)
     txt = txt.strip()
@@ -36,7 +42,7 @@ def get_mail_content(msg):
         content_type = msg.get_content_type()
         content_text = ''
         try:
-            if msg.get('content-transfer-encoding') is not None:
+            if msg.get('content-transfer-encoding') in _SHOULD_DECODED_ENCODING:
                 content_text = msg.get_payload(decode=True).decode(content_charset)
             else:
                 content_text = msg.get_payload(decode=False)
@@ -112,6 +118,9 @@ def extract_email_content_as_list(file_path):
 
         if charset:
             subject = subject.decode(charset, errors='ignore')
+        else:
+            if isinstance(subject, bytes):
+                subject = str(subject, errors='ignore')
 
         subject = split_words(subject)
         # print(subject)
