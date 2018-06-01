@@ -17,6 +17,8 @@ SPACE_RE = re.compile("^\s+$")
 ENCODING_RE = re.compile(r"content-type(.*?);(\s+)?charset(\s+)?=(\s+)?['\"]?(.*?)['\"]?\s",
                          re.IGNORECASE | re.MULTILINE)
 
+ENCODING_RE2 = re.compile(r"Subject:(\s+)?=\?([a-zA-Z0-9\-]+)\?", re.IGNORECASE | re.MULTILINE)
+
 
 def split_words(txt: str):
     txt = re.sub(SYMBOL_RE, " ", txt)
@@ -60,11 +62,18 @@ def read_email(file_path):
         guessed_encoding = chardet.detect(eml_content_bytes)
         used_encoding = guessed_encoding['encoding']
         if guessed_encoding['confidence'] < 0.87:
-            m = ENCODING_RE.search(str(eml_content_bytes, 'ascii', errors='ignore'))
+            email_content_ascii = str(eml_content_bytes, 'ascii', errors='ignore')
+            m = ENCODING_RE.search(email_content_ascii)
             if m is not None:
                 m_list = m.groups()
                 if len(m_list) >= 5:
                     used_encoding = m_list[4]
+            else:
+                m = ENCODING_RE2.search(email_content_ascii)
+                if m is not None:
+                    m_list = m.groups()
+                    if len(m_list) >= 2:
+                        used_encoding = m_list[1]
 
             if used_encoding is None:
                 used_encoding = 'utf-8'
