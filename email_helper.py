@@ -66,7 +66,10 @@ def get_mail_content(msg):
             return payload
 
 
-def read_email(file_path):
+def read_email(file_path, raw=False):
+    if raw:
+        return email.message_from_string(file_path)
+
     fp = open(file_path, 'rb')
     try:
         eml_content_bytes = fp.read()
@@ -113,10 +116,10 @@ def get_recipients(to_txt):
     return recipients
 
 
-def extract_email_content_as_list(file_path):
+def extract_email_content_as_list(file_path, raw=False):
     try:
         text_list = []
-        msg = read_email(file_path)
+        msg = read_email(file_path, raw)
         recipients = get_recipients(msg['To'])
         text_list.extend(recipients)
 
@@ -153,4 +156,9 @@ def convert_all_text_to_zh_cn(str_list):
 
 def process_email(file_path):
     data = extract_email_content_as_list(file_path)
+    return convert_all_text_to_zh_cn(data)
+
+
+def process_email_content(eml_content):
+    data = extract_email_content_as_list(eml_content, raw=True)
     return convert_all_text_to_zh_cn(data)
