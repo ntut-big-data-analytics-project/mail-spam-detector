@@ -37,6 +37,7 @@ from pyspark.mllib.linalg import (
     Vector, Vectors, DenseVector, SparseVector, _convert_to_vector)
 from pyspark.mllib.regression import LabeledPoint
 from pyspark.mllib.util import JavaLoader, JavaSaveable
+import numpy as np
 
 __all__ = ['Normalizer', 'StandardScalerModel', 'StandardScaler',
            'HashingTF', 'IDFModel', 'IDF', 'Word2Vec', 'Word2VecModel',
@@ -466,10 +467,24 @@ class HashingTF(object):
         self.binary = value
         return self
 
+    def javaStrHashFunc(self, string):
+        h = np.array([0], dtype = np.int32);
+        val = [ord(x) for x in string];
+        
+        for i in range(0, len(val)):
+            h = 31 * h + val[i]
+            
+        
+        return h[0];
+
     @since('1.2.0')
     def indexOf(self, term):
         """ Returns the index of the input term. """
-        return hash(term) % self.numFeatures
+        if not isinstance(term, str):
+            return hash(term) % self.numFeatures
+        else:
+            # from java's string hash
+            return self.javaStrHashFunc(term) % self.numFeatures
 
     @since('1.2.0')
     def transform(self, document):
