@@ -1,0 +1,20 @@
+plugins {
+    id 'java'
+}
+
+ext {
+    SPARK_HOME = System.getenv('SPARK_HOME')
+    HADOOP_HOME = System.getenv('HADOOP_HOME')
+}
+
+sourceCompatibility = 1.8
+
+repositories {
+    mavenCentral()
+}
+
+
+dependencies {
+    compileOnly fileTree(dir: SPARK_HOME + '/jars', include: ['*.jar'])
+    testCompile group: 'junit', name: 'junit', version: '4.12'
+}
