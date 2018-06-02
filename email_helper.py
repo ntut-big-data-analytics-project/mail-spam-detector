@@ -34,12 +34,19 @@ def split_words(txt: str):
     return list(filter(lambda s: SYMBOL_RE.match(s) is None, iterator))
 
 
+def guess_encoding(bytes_str):
+    guessed_encoding = chardet.detect(bytes_str)
+    if guessed_encoding['confidence'] >= 0.87:
+        return guessed_encoding['encoding']
+    return None
+
+
 def get_mail_content(msg):
     if isinstance(msg, list):
         return ' '.join(map(get_mail_content, msg))
     else:
         content_charset = msg.get_content_charset()
-        content_type = msg.get_content_type()
+        content_type = msg.get_content_type().lower()
         content_text = ''
 
         if (not content_type.startswith("multipart/")) and (not content_type.startswith("text/")):
@@ -47,7 +54,11 @@ def get_mail_content(msg):
 
         try:
             if msg.get('content-transfer-encoding') in _SHOULD_DECODED_ENCODING:
-                content_text = msg.get_payload(decode=True).decode(content_charset)
+                content_text = msg.get_payload(decode=True)
+                if content_charset is None:
+                    content_charset = guess_encoding(content_text)
+
+                content_text = content_text.decode(content_charset)
             else:
                 content_text = msg.get_payload(decode=False)
         except:
@@ -74,9 +85,8 @@ def read_email(file_path, raw=False):
     try:
         eml_content_bytes = fp.read()
         fp.close()
-        guessed_encoding = chardet.detect(eml_content_bytes)
-        used_encoding = guessed_encoding['encoding']
-        if guessed_encoding['confidence'] < 0.87:
+        used_encoding = guess_encoding(eml_content_bytes)
+        if used_encoding is None:
             email_content_ascii = str(eml_content_bytes, 'ascii', errors='ignore')
             m = ENCODING_RE.search(email_content_ascii)
             if m is not None:
