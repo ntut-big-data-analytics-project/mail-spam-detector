@@ -70,6 +70,7 @@ public class BayesClassification {
                     final JavaRDD<Vector> dataSetVector = spamWords.union(hamWords);
                     dataSetVector.cache();
                     idf = new IDF().fit(dataSetVector.rdd());
+
                     spamFeatures = spamWords.map(idf::transform);
                     hamFeatures = hamWords.map(idf::transform);
                 } else {
@@ -156,7 +157,6 @@ public class BayesClassification {
 
                 String[] data = body.split(SP_CHAR);
                 Vector v = tf.transform(Arrays.asList(data));
-
                 if (INCLUDE_TF_IDF) {
                     v = idf.transform(v);
                 }
@@ -166,6 +166,45 @@ public class BayesClassification {
             }
         });
 
+        final double[][] testResult = new double[3][2];
+
+        _server.addRoute("/test-result", new WebServer.WebServerResponse() {
+            @Override
+            protected byte[] response() throws Exception {
+                if (testResult[2][0] == 0) {
+                    final List<Path> spamList = getAllFilesInPath(new File(args[0]).toPath());
+                    final List<Path> hamList = getAllFilesInPath(new File(args[1]).toPath());
+                    final List<Vector> spamVecList = spamList.parallelStream().map(p -> getFeatures(p, tf, idf)).collect(Collectors.toList());
+                    final List<Vector> hamVecList = hamList.parallelStream().map(p -> getFeatures(p, tf, idf)).collect(Collectors.toList());
+                    final JavaRDD<Vector> spamVecRdd = sc.parallelize(spamVecList);
+                    final JavaRDD<Vector> hamVecRdd = sc.parallelize(hamVecList);
+
+                    final long spamIsSpamCount = model.predict(spamVecRdd).filter(v -> v == 1).count();
+                    final long hamIsHamCount = model.predict(hamVecRdd).filter(v -> v == 0).count();
+
+                    testResult[0][0] = spamIsSpamCount;  //A: spam, P: spam
+                    testResult[0][1] = spamList.size() - spamIsSpamCount; //A: spam, P: hum
+                    testResult[1][0] = hamList.size() - hamIsHamCount;  //A: hum, P: spam
+                    testResult[1][1] = hamIsHamCount; //A: hum, P: hum
+
+                    testResult[2][0] = 1;
+                }
+                String ret = String.format("{\n" +
+                                "    \"TP\": %8d, \"FN\": %8d,\n" +
+                                "    \"FP\": %8d, \"TN\": %8d\n" +
+                                "}",
+                        (int) testResult[0][0], (int) testResult[0][1],
+                        (int) testResult[1][0], (int) testResult[1][1]
+                );
+
+                return ret.getBytes();
+            }
+
+            protected String getExt() {
+                return "json";
+            }
+        });
+        System.out.println("Starting Server");
         _server.start();
         //spark.stop();
     }
@@ -197,7 +236,18 @@ public class BayesClassification {
         return sc.parallelize(l);
     }
 
-    private static JavaRDD<Vector> getFeatures(final HashingTF tf, final JavaRDD<String> src) {
-        return src.map(s -> tf.transform(Arrays.asList(s.split(SP_CHAR))));
+    private static Vector getFeatures(final Path path, final HashingTF tf, final IDFModel idf) {
+        String[] data = new String[0];
+        try {
+            data = new String(Files.readAllBytes(path), StandardCharsets.UTF_8).split(SP_CHAR);
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+        Vector v = tf.transform(Arrays.asList(data));
+        if (INCLUDE_TF_IDF) {
+            v = idf.transform(v);
+        }
+
+        return v;
     }
 }

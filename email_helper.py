@@ -30,6 +30,7 @@ def split_words(txt: str):
     txt = re.sub(SYMBOL_RE, " ", txt)
     txt = re.sub(NOT_ALLOW_CHAR, "", txt)
     txt = txt.strip()
+    txt = zhconv.convert(txt, 'zh-cn')
     iterator = jieba.cut(txt)
     return list(filter(lambda s: SYMBOL_RE.match(s) is None, iterator))
 
